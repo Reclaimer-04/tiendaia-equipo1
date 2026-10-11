@@ -1,4 +1,0 @@
-# Servicio integrador (Laboratorio 1). Instalar con: pip install -r requirements.txt
-fastapi>=0.115
-uvicorn[standard]>=0.30
-requests>=2.31
