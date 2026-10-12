@@ -45,7 +45,7 @@ def guardar_registro(ciudad):
 
     url = (
         f"{SUPABASE_URL}/rest/v1/"
-        "historial_recomendaciones"
+        "consultas"
     )
 
     try:
@@ -76,7 +76,7 @@ def obtener_registros(limite):
 
     url = (
         f"{SUPABASE_URL}/rest/v1/"
-        "historial_recomendaciones"
+        "consultas"
     )
 
     try:
