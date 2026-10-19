@@ -57,3 +57,4 @@ async def proxy(request: Request, servicio: str = Path(...), ruta: str = Path(..
     )
 
     return Response(content=respuesta.content, status_code=respuesta.status_code, headers=dict(respuesta.headers))
+#varias correct¿ciones
