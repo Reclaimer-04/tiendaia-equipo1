@@ -15,3 +15,4 @@ RUN chmod +x /wait-for-it.sh
 EXPOSE 8000
 
 ENTRYPOINT ["/wait-for-it.sh", "mysql", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+ #correccion
