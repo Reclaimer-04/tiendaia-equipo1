@@ -1,0 +1,83 @@
+services:
+  gateway:
+    build: ./gateway
+    ports:
+      - "8000:8000"
+    depends_on:
+      - clientes
+      - productos
+      - ventas
+      - ia
+
+  clientes:
+    build: ./clientes
+    ports:
+      - "8001:8000"
+    environment:
+      DATABASE_URL: mysql+pymysql://tienda:${MYSQL_PASSWORD}@mysql:3306/tienda
+    depends_on:
+      - mysql
+
+  productos:
+    build: ./productos
+    ports:
+      - "8002:8000"
+    environment:
+      MONGO_URL: mongodb://mongo:27017
+    depends_on:
+      - mongo
+
+  ventas:
+    build: ./ventas
+    ports:
+      - "8003:8000"
+    environment:
+      REDIS_HOST: redis
+      CLIENTES_URL: http://clientes:8000
+      PRODUCTOS_URL: http://productos:8000
+    depends_on:
+      - redis
+      - clientes
+      - productos
+
+  ia:
+    build: ./ia_service
+    ports:
+      - "8004:8000"
+    environment:
+      VENTAS_URL: http://ventas:8000
+      MODELO_PATH: /modelos/modelo.joblib
+    volumes:
+      - ./modelos:/modelos
+    depends_on:
+      - ventas
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: tienda
+      MYSQL_USER: tienda
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mongo:
+    image: mongo:6.0
+    ports:
+      - "27017:27017"
+
+  redis:
+    image: redis:7.0
+    ports:
+      - "6379:6379"
+
+volumes:
+  mysql_data:

@@ -218,3 +218,13 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Archivos de entorno
+.env
+
+# Configuración local de VS Code
+.vscode/
+
+# Archivos temporales o de prueba
+*.log
+*.tmp

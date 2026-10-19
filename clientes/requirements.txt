@@ -1,0 +1,6 @@
+# Servicio Clientes (Laboratorio 2): API REST + base de datos MySQL
+fastapi>=0.115 # framework de la API REST (incluye pydantic para validar)
+uvicorn[standard]>=0.30 # servidor ASGI que ejecuta la aplicación FastAPI
+sqlalchemy>=2.0 # crea la tabla y arma las consultas SQL desde Python
+pymysql>=1.1 # controlador que conecta SQLAlchemy con MySQL
+cryptography>=42 # la usa pymysql para la autenticación de MySQL 8
