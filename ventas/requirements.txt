@@ -1,0 +1,5 @@
+# Servicio Ventas (Laboratorio 2): API REST + Redis + llamadas a otros servicios
+fastapi >=0.115
+uvicorn[standard] >=0.30
+redis >=5.0
+requests >=2.31

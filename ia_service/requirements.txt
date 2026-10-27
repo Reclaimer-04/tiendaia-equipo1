@@ -1,0 +1,7 @@
+# Servicio de IA (Laboratorio 2): entrena y sirve el modelo de demanda
+fastapi >=0.115
+uvicorn[standard] >=0.30
+requests >=2.31
+pandas >=2.2
+scikit-learn >=1.5
+joblib >=1.4
