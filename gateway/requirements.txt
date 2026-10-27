@@ -1,0 +1,4 @@
+# API Gateway (Laboratorio 2): punto único de entrada
+fastapi >=0.115
+uvicorn[standard] >=0.30
+requests >=2.31
