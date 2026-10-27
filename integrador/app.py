@@ -100,7 +100,11 @@ def pais(codigo: str):
 
 class SolicitudRecomendacion(BaseModel):
     ciudad: str = Field("Ciudad Valles", min_length=2, max_length=80)
-    productos: list[str] = Field(default=["Café de la Huasteca", "Piloncillo", "Miel de abeja", "Zacahuil", "Bocoles"], min_length=1, max_length=10)
+    productos: list[str] = Field(
+        default_factory=lambda: ["Café de la Huasteca", "Piloncillo", "Miel de abeja", "Zacahuil", "Bocoles"],
+        min_length=1,
+        max_length=10,
+    )
 
 def regla_simple(c: dict, productos: list[str]) -> str:
     if c["precipitacion_mm"] > 0 or c["temperatura_c"] < 20:
@@ -121,8 +125,15 @@ def guardar_consulta(registro: dict) -> dict:
         registro = {"id": len(_historial) + 1, "creado": time.strftime("%Y-%m-%dT%H:%M:%S"), **registro}
         _historial.append(registro)
         return registro
-    filas = llamar("POST", f"{SUPABASE_URL}/rest/v1/consultas", json=registro,
-                   headers={**_cabeceras_supabase(), "Prefer": "return representation"})
+    filas = llamar(
+        "POST",
+        f"{SUPABASE_URL}/rest/v1/consultas",
+        json=registro,
+        headers={
+            **_cabeceras_supabase(),
+            "Prefer": "return=representation",
+        },
+    )
     return filas[0]
 
 def leer_historial(limite: int) -> list[dict]:
