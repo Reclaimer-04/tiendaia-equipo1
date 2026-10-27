@@ -16,6 +16,7 @@ from pymongo import MongoClient, ReturnDocument
 # "mongo" es el nombre del contenedor en docker-compose.yml).
 db = MongoClient(os.environ["MONGO_URL"])["tienda"]
 # ["tienda"] selecciona la base de datos; MongoDB la crea al primer uso.
+db.productos.create_index("id", unique=True)
 
 app = FastAPI(title="TiendaIA - Productos")
 
@@ -52,11 +53,16 @@ def salud():
     return {"servicio": "productos", "status": "ok"}
 
 @app.get("/productos")
-def listar():
-    """Devuelve todos los productos (200)."""
+def listar(categoria: str | None = None, precio_max: float | None = None):
+    """Devuelve los productos (200), aplicando filtros opcionales."""
+    filtro = {}
+    if categoria is not None:
+        filtro["categoria"] = categoria
+    if precio_max is not None:
+        filtro["precio"] = {"$lte": precio_max}
+        
     # {"_id": 0} es una proyección: excluye el campo id interno de MongoDB
-    # (un ObjectId que no se puede convertir a JSON directamente).
-    return list(db.productos.find({}, {"_id": 0}))
+    return list(db.productos.find(filtro, {"_id": 0}))
 
 @app.get("/productos/{producto_id}")
 def obtener(producto_id: int):
