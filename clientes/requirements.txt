@@ -1,0 +1,6 @@
+# Servicio Clientes (Laboratorio 2): API REST base de datos MySQL
+fastapi >=0.115
+uvicorn[standard] >=0.30
+sqlalchemy >=2.0
+pymysql >=1.1
+cryptography >=42
