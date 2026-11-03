@@ -1,2 +1,5 @@
 # tiendaia-equipo1
-integrantes A,B Y C
+Integrantes
+Jose Maria Santiago Antonio
+Saul Gonzales Campillo
+Adiel Josafat Aguilar Hernandez
