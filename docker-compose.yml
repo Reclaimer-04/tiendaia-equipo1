@@ -8,7 +8,12 @@
 x-servicio: &servicio
   restart: unless-stopped
   build: &construir
-    context: . # se construye con el Dockerfile de esta carpeta
+    context: .
+  healthcheck:
+    test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:8000/health')"]
+    interval: 10s
+    timeout: 3s
+    retries: 5
 
 services:
   # ============================================================================
@@ -77,33 +82,32 @@ services:
     build: {<<: *construir, args: {SERVICIO: ventas}}
     environment:
       REDIS_HOST: redis
-    # Ventas llama a Clientes y Productos: se inician antes (solo orden de arranque)
-    depends_on: [redis, clientes, productos]
+    depends_on:
+      redis: {condition: service_started}
+      clientes: {condition: service_healthy}
+      productos: {condition: service_healthy}
 
   ia:
     <<: *servicio
     build: {<<: *construir, args: {SERVICIO: ia_service}}
     environment:
-      VENTAS_URL: http://ventas:8000 # de aquí obtiene los datos para entrenar
+      VENTAS_URL: http://ventas:8000
       MODELO_PATH: /modelos/modelo.joblib
-    # El modelo entrenado se guarda en un volumen para no perderlo al recrear
     volumes: [modelos:/modelos]
-    depends_on: [ventas]
+    depends_on:
+      ventas: {condition: service_healthy}
 
-  # ============================================================================
-  # Punto de entrada
-  # ============================================================================
   gateway:
     <<: *servicio
     build: {<<: *construir, args: {SERVICIO: gateway}}
-    # Único puerto publicado: el 8080 de la máquina se conecta al 8000 del gateway.
-    # Desde fuera se usa http://localhost:8080/api/...
     ports: ["8080:8000"]
     environment:
-      # Orígenes que pueden llamar al gateway desde el navegador (CORS). "*"
-      # en la nube conviene poner la URL exacta del cliente web.
       CORS_ORIGINS: ${CORS_ORIGINS:-*}
-    depends_on: [clientes, productos, ventas, ia]
+    depends_on:
+      clientes: {condition: service_healthy}
+      productos: {condition: service_healthy}
+      ventas: {condition: service_healthy}
+      ia: {condition: service_healthy}
 
   # ============================================================================
   # Cliente web
