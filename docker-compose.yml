@@ -61,13 +61,10 @@ services:
   # Ninguno publica puertos (no hay "ports"): solo se alcanzan dentro de la red
   # interna de Compose, por su nombre (http://clientes:8000). Escuchan en el 8000.
   clientes:
-    <<: *servicio # copia las opciones comunes del ancla &servicio
-    # Misma imagen base, pero con SERVICIO=clientes (ver Dockerfile)
+    <<: *servicio
     build: {<<: *construir, args: {SERVICIO: clientes}}
     environment:
-      # "mysql" es el nombre del contenedor de la base: Compose lo resuelve por DNS
       DATABASE_URL: mysql+pymysql://tienda:${MYSQL_PASSWORD}@mysql:3306/tienda
-    # No arranca hasta que el healthcheck de MySQL sea exitoso
     depends_on: {mysql: {condition: service_healthy}}
 
   productos:
@@ -82,10 +79,8 @@ services:
     build: {<<: *construir, args: {SERVICIO: ventas}}
     environment:
       REDIS_HOST: redis
-    depends_on:
-      redis: {condition: service_started}
-      clientes: {condition: service_healthy}
-      productos: {condition: service_healthy}
+      RABBITMQ_HOST: rabbitmq
+    depends_on: [redis, clientes, productos]
 
   ia:
     <<: *servicio
@@ -93,10 +88,11 @@ services:
     environment:
       VENTAS_URL: http://ventas:8000
       MODELO_PATH: /modelos/modelo.joblib
+      REDIS_HOST: redis
+      RABBITMQ_HOST: rabbitmq
     volumes: [modelos:/modelos]
-    depends_on:
-      ventas: {condition: service_healthy}
-
+    depends_on: [ventas]
+    
   gateway:
     <<: *servicio
     build: {<<: *construir, args: {SERVICIO: gateway}}
@@ -109,15 +105,41 @@ services:
       ventas: {condition: service_healthy}
       ia: {condition: service_healthy}
 
+  rabbitmq:
+    image: rabbitmq:4-management
+    restart: unless-stopped
+    ports: ["127.0.0.1:15672:15672"]
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      retries: 10
+
+  notificaciones:
+    <<: *servicio
+    build: {<<: *construir, args: {SERVICIO: notificaciones}}
+    environment: {REDIS_HOST: redis, RABBITMQ_HOST: rabbitmq}
+    depends_on:
+      rabbitmq: {condition: service_healthy}
+
+  worker:
+    <<: *servicio
+    build: {<<: *construir, args: {SERVICIO: ia_service}}
+    command: ["python", "worker.py"]
+    environment:
+      MODELO_PATH: /modelos/modelo.joblib
+      REDIS_HOST: redis
+      RABBITMQ_HOST: rabbitmq
+      RETARDO_MS: "200"
+    volumes: [modelos:/modelos]
+    depends_on:
+      rabbitmq: {condition: service_healthy}
+
   # ============================================================================
   # Cliente web
   # ============================================================================
-  # Nginx sirve los archivos estáticos de frontend/ (HTML, CSS y JS) tal cual.
-  # Se abre en http://localhost:8081; el navegador llama al gateway en el 8080.
   web:
     image: nginx:1.27-alpine
     restart: unless-stopped
-    # ro = solo lectura; al editar un archivo basta con recargar el navegador
     volumes: ["./frontend:/usr/share/nginx/html:ro"]
     ports: ["8081:80"]
 
