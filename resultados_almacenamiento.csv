@@ -1,0 +1,17 @@
+fecha,destino,prueba,media,desv,unidad,n,errores
+2026-11-07T21:06:49,seaweedfs-laptop,subida 1 MB,17.65,9.97,MB/s,5,0
+2026-11-07T21:06:49,seaweedfs-laptop,bajada 1 MB,79.13,20.24,MB/s,5,0
+2026-11-07T21:06:51,seaweedfs-laptop,subida 10 MB,48.32,4.88,MB/s,5,0
+2026-11-07T21:06:51,seaweedfs-laptop,bajada 10 MB,238.64,21.47,MB/s,5,0
+2026-11-07T21:06:54,seaweedfs-laptop,subida 25 MB,52.58,5.86,MB/s,5,0
+2026-11-07T21:06:54,seaweedfs-laptop,bajada 25 MB,283.54,43.15,MB/s,5,0
+2026-11-07T21:06:56,seaweedfs-laptop,200 archivos de 10 KB,8.49,0.73,ms/archivo,200,0
+2026-11-07T21:06:56,seaweedfs-laptop,rendimiento pequeños,117.71,0,archivos/s,1,0
+2026-11-07T21:25:44,b2-laptop,subida 1 MB,2.1,0.67,MB/s,5,0
+2026-11-07T21:25:44,b2-laptop,bajada 1 MB,4.16,1.91,MB/s,5,0
+2026-11-07T21:25:55,b2-laptop,subida 10 MB,7.93,2.56,MB/s,5,0
+2026-11-07T21:25:55,b2-laptop,bajada 10 MB,15.56,3.2,MB/s,5,0
+2026-11-07T21:26:16,b2-laptop,subida 25 MB,10.56,3.32,MB/s,5,0
+2026-11-07T21:26:16,b2-laptop,bajada 25 MB,19.31,0.95,MB/s,5,0
+2026-11-07T21:28:45,b2-laptop,200 archivos de 10 KB,741.72,722.08,ms/archivo,200,0
+2026-11-07T21:28:45,b2-laptop,rendimiento pequeños,1.35,0,archivos/s,1,0

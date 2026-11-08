@@ -1,8 +1,6 @@
-"""Microservicio Productos de TiendaIA (Laboratorio 2).
+"""Microservicio Productos de TiendaIA.
 Expone un CRUD de productos (nombre, precio, categoría) con FastAPI y guarda los
 datos en MongoDB, una base de datos de documentos (cada producto es un JSON).
-No llama a otros servicios: Ventas lo consulta por HTTP para obtener el precio y
-validar que el producto exista; el API Gateway le reenvia las peticiones externas.
 """
 import os
 from fastapi import FastAPI, HTTPException
@@ -21,24 +19,21 @@ db.productos.create_index("id", unique=True)
 app = FastAPI(title="TiendaIA - Productos")
 
 # ==============================================================================
-# Modelo de entrada
+# Modelos de entrada
 # ==============================================================================
 class ProductoIn(BaseModel):
-    """Datos de un producto enviados en el cuerpo JSON.
-    Si no cumplen las reglas, FastAPI responde 422 automáticamente.
-    """
+    """Datos de un producto enviados en el cuerpo JSON."""
     nombre: str = Field(min_length=1, max_length=100)
-    # Field(gt=0): "greater than 0", el precio debe ser estrictamente positivo
     precio: float = Field(gt=0)
-    categoria: str = "general" # valor por omisión si no se envia
+    categoria: str = "general" # valor por omisión si no se envía
+
+class ImagenIn(BaseModel):
+    """Modelo para recibir la clave de la imagen (Lab 4)."""
+    imagen_key: str | None
+
 
 def siguiente_id() -> int:
     """Id entero autoincremental (MongoDB no lo tiene: usamos un contador)."""
-    # Documento contador {"_id": "productos", "valor": N} en la colección
-    # "contadores". $inc suma 1 de forma ATOMICA en el servidor: aunque lleguen
-    # dos peticiones al mismo tiempo, nunca reciben el mismo id.
-    # upsert=True crea el contador la primera vez; ReturnDocument.AFTER devuelve
-    # el documento ya incrementado.
     doc = db.contadores.find_one_and_update(
         {"_id": "productos"}, {"$inc": {"valor": 1}},
         upsert=True, return_document=ReturnDocument.AFTER)
@@ -69,7 +64,6 @@ def obtener(producto_id: int):
     """Devuelve un producto por su id (200) o 404 si no existe."""
     p = db.productos.find_one({"id": producto_id}, {"_id": 0})
     if p is None:
-        # Ventas interpreta este 404 como "el producto no existe"
         raise HTTPException(404, "Producto no encontrado")
     return p
 
@@ -77,18 +71,27 @@ def obtener(producto_id: int):
 def crear(p: ProductoIn):
     """Crea un producto con id nuevo. Responde 201 (Created) o 422 si es inválido."""
     doc = {"id": siguiente_id(), **p.model_dump()}
-    db.productos.insert_one(dict(doc)) # copia: insert_one agrega id
+    db.productos.insert_one(dict(doc)) # copia: insert_one agrega _id
     return doc
 
 @app.put("/productos/{producto_id}")
 def actualizar(producto_id: int, p: ProductoIn):
     """Actualiza los campos de un producto (200) o responde 404 si no existe."""
-    # $set reemplaza solo los campos indicados y conserva el resto del documento
     r = db.productos.update_one({"id": producto_id}, {"$set": p.model_dump()})
-    # matched_count = documentos que coincidieron con el filtro
     if r.matched_count == 0:
         raise HTTPException(404, "Producto no encontrado")
     return {"id": producto_id, **p.model_dump()}
+
+@app.put("/productos/{id}/imagen")
+def actualizar_imagen(id: int, imagen: ImagenIn):
+    """Actualiza solo la clave de la imagen en el producto (Lab 4)."""
+    resultado = db.productos.update_one(
+        {"id": id}, 
+        {"$set": {"imagen_key": imagen.imagen_key}}
+    )
+    if resultado.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+    return {"id": id, "imagen_key": imagen.imagen_key}
 
 @app.delete("/productos/{producto_id}", status_code=204)
 def eliminar(producto_id: int):
