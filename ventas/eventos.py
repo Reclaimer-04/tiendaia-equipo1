@@ -19,6 +19,6 @@ def publicar(clave: str, datos: dict) -> bool:
                             properties=pika.BasicProperties(delivery_mode=2, content_type="application/json"))
         con.close()
         return True
-    except pika.exceptions.AMQPError as e:
+    except Exception as e:
         logging.warning("No se publicó %s: %s", clave, e)
         return False
