@@ -1,0 +1,3 @@
+pika>=1.3 # cliente de RabbitMQ
+redis>=5.0 # cliente de Redis
+requests>=2.31 # cliente HTTP para solicitar el reentrenamiento al IA-Service

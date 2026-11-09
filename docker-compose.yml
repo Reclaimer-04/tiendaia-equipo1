@@ -1,10 +1,10 @@
-# TiendaIA - Laboratorio 2
-# Define todos los contenedores del sistema: 3 bases de datos, 4 microservicios
-# y el API Gateway. Se levanta con: docker compose up -d --build
-# Las contraseñas (${MYSQL_PASSWORD}...) se leen del archivo .env, no del código.
 
-# Bloque reutilizable (ancla YAML &servicio): opciones comunes de los microservicios.
-# Las claves que empiezan con "x-" Docker Compose las ignora; solo sirven de plantilla.
+# TiendaIA - Laboratorio 2, 3 y 4
+# Define los contenedores del sistema: bases de datos, microservicios,
+# API Gateway, suscriptores y servicios complementarios.
+# Se levanta con: docker compose up -d --build
+# Las contraseñas se leen del archivo .env, no del código.
+
 x-servicio: &servicio
   restart: unless-stopped
   build: &construir
@@ -16,22 +16,22 @@ x-servicio: &servicio
     retries: 5
 
 services:
+
   # ============================================================================
   # Bases de datos
   # ============================================================================
+
   # MySQL: base relacional para Clientes
   mysql:
     image: mysql:8.4
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: tienda     # base que se crea al iniciar por primera vez
-      MYSQL_USER: tienda         # usuario de la aplicación (no se usa root)
+      MYSQL_DATABASE: tienda
+      MYSQL_USER: tienda
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-    # Volumen con nombre: los datos sobreviven aunque se borre el contenedor
-    volumes: [mysql_data:/var/lib/mysql]
-    # healthcheck: Docker pregunta cada 5 s si MySQL ya acepta conexiones.
-    # Clientes espera a que esté "healthy" (MySQL tarda en arrancar).
+    volumes:
+      - mysql_data:/var/lib/mysql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 5s
@@ -41,47 +41,58 @@ services:
   mongo:
     image: mongo:7
     restart: unless-stopped
-    volumes: [mongo_data:/data/db]
+    volumes:
+      - mongo_data:/data/db
     healthcheck:
       test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
       interval: 5s
       retries: 20
 
-  # Redis: base clave-valor en memoria para Ventas
+  # Redis: base clave-valor en memoria
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    # --appendonly yes: guarda cada escritura en disco para no perder datos al reiniciar
     command: ["redis-server", "--appendonly", "yes"]
-    volumes: [redis_data:/data]
+    volumes:
+      - redis_data:/data
 
   # ============================================================================
   # Microservicios
   # ============================================================================
-  # Ninguno publica puertos (no hay "ports"): solo se alcanzan dentro de la red
-  # interna de Compose, por su nombre (http://clientes:8000). Escuchan en el 8000.
+
+  # Clientes
   clientes:
     <<: *servicio
     build: {<<: *construir, args: {SERVICIO: clientes}}
     environment:
       DATABASE_URL: mysql+pymysql://tienda:${MYSQL_PASSWORD}@mysql:3306/tienda
-    depends_on: {mysql: {condition: service_healthy}}
+    depends_on:
+      mysql:
+        condition: service_healthy
 
+  # Productos
   productos:
     <<: *servicio
     build: {<<: *construir, args: {SERVICIO: productos}}
     environment:
       MONGO_URL: mongodb://mongo:27017
-    depends_on: {mongo: {condition: service_healthy}}
+    depends_on:
+      mongo:
+        condition: service_healthy
 
+  # Ventas
   ventas:
     <<: *servicio
     build: {<<: *construir, args: {SERVICIO: ventas}}
     environment:
       REDIS_HOST: redis
-      RABBITMQ_HOST: rabbitmq
-    depends_on: [redis, clientes, productos]
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
+    depends_on:
+      - redis
+      - clientes
+      - productos
 
+  # Inteligencia Artificial
   ia:
     <<: *servicio
     build: {<<: *construir, args: {SERVICIO: ia_service}}
@@ -89,38 +100,57 @@ services:
       VENTAS_URL: http://ventas:8000
       MODELO_PATH: /modelos/modelo.joblib
       REDIS_HOST: redis
-      RABBITMQ_HOST: rabbitmq
-    volumes: [modelos:/modelos]
-    depends_on: [ventas]
-    
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
+    volumes:
+      - modelos:/modelos
+    depends_on:
+      - ventas
+
+  # API Gateway
   gateway:
     <<: *servicio
     build: {<<: *construir, args: {SERVICIO: gateway}}
-    ports: ["8080:8000"]
+    ports:
+      - "8080:8000"
     environment:
       CORS_ORIGINS: ${CORS_ORIGINS:-*}
     depends_on:
-      clientes: {condition: service_healthy}
-      productos: {condition: service_healthy}
-      ventas: {condition: service_healthy}
-      ia: {condition: service_healthy}
+      clientes:
+        condition: service_healthy
+      productos:
+        condition: service_healthy
+      ventas:
+        condition: service_healthy
+      ia:
+        condition: service_healthy
 
+  # ============================================================================
+  # RabbitMQ y suscriptores
+  # ============================================================================
+
+  # Broker de mensajes
   rabbitmq:
     image: rabbitmq:4-management
     restart: unless-stopped
-    ports: ["127.0.0.1:15672:15672"]
+    ports:
+      - "127.0.0.1:15672:15672"
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
       retries: 10
 
+  # Suscriptor de notificaciones
   notificaciones:
     <<: *servicio
     build: {<<: *construir, args: {SERVICIO: notificaciones}}
-    environment: {REDIS_HOST: redis, RABBITMQ_HOST: rabbitmq}
+    environment:
+      REDIS_HOST: redis
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
     depends_on:
-      rabbitmq: {condition: service_healthy}
+      rabbitmq:
+        condition: service_healthy
 
+  # Worker de IA
   worker:
     <<: *servicio
     build: {<<: *construir, args: {SERVICIO: ia_service}}
@@ -128,22 +158,40 @@ services:
     environment:
       MODELO_PATH: /modelos/modelo.joblib
       REDIS_HOST: redis
-      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
       RETARDO_MS: "200"
-    volumes: [modelos:/modelos]
+    volumes:
+      - modelos:/modelos
     depends_on:
-      rabbitmq: {condition: service_healthy}
+      rabbitmq:
+        condition: service_healthy
+
+  # Segundo suscriptor: IA Listener
+  # Cuenta las ventas y solicita el reentrenamiento cada 50 eventos.
+  ia_listener:
+    <<: *servicio
+    build: {<<: *construir, args: {SERVICIO: ia_listener}}
+    command: ["python", "listener.py"]
+    environment:
+      REDIS_HOST: redis
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
+      IA_URL: "http://ia:8000"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
 
   # ============================================================================
   # Almacenamiento de objetos (Lab 4)
   # ============================================================================
+
   seaweedfs:
     image: chrislusf/seaweedfs
     restart: unless-stopped
     command: >-
       server -dir=/data -volume.max=100 -master.volumeSizeLimitMB=1024
       -s3 -s3.config=/etc/seaweedfs/s3.json
-    ports: ["8333:8333"]
+    ports:
+      - "8333:8333"
     volumes:
       - seaweed_data:/data
       - ./seaweed/s3.json:/etc/seaweedfs/s3.json:ro
@@ -152,7 +200,8 @@ services:
     image: mcr.microsoft.com/azure-storage/azurite
     restart: unless-stopped
     command: azurite-blob --blobHost 0.0.0.0 --skipApiVersionCheck
-    ports: ["10000:10000"]
+    ports:
+      - "10000:10000"
 
   imagenes:
     <<: *servicio
@@ -164,22 +213,32 @@ services:
       S3_BUCKET: tiendaia-imagenes
       S3_ACCESS_KEY: ${S3_ADMIN_KEY}
       S3_SECRET_KEY: ${S3_ADMIN_SECRET}
+
       # Azure variables
       BlobEndpoint: http://azurite:10000/devstoreaccount1
       S3_PUBLIC_ENDPOINT_AZURE: http://localhost:10000/devstoreaccount1
-      ALMACEN: azure # <-- El selector que usaremos ahora
-    depends_on: [seaweedfs, azurite, productos]
+      ALMACEN: azure
+    depends_on:
+      - seaweedfs
+      - azurite
+      - productos
 
   # ============================================================================
   # Cliente web
   # ============================================================================
+
   web:
     image: nginx:1.27-alpine
     restart: unless-stopped
-    volumes: ["./frontend:/usr/share/nginx/html:ro"]
-    ports: ["8081:80"]
+    volumes:
+      - "./frontend:/usr/share/nginx/html:ro"
+    ports:
+      - "8081:80"
 
-# Volúmenes con nombre: Docker los administra y conservan los datos
+# ============================================================================
+# Volúmenes persistentes
+# ============================================================================
+
 volumes:
   mysql_data:
   mongo_data:
