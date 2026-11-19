@@ -1,7 +1,12 @@
+
 {
   "name": "TiendaIA",
   "image": "mcr.microsoft.com/devcontainers/python:3.12",
-  "features": { "ghcr.io/devcontainers/features/docker-in-docker:2": {} },
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "moby": false
+    }
+  },
   "forwardPorts": [8080],
   "postCreateCommand": "pip install requests"
 }
