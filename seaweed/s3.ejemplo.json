@@ -1,0 +1,14 @@
+{
+  "identities": [
+    {
+      "name": "tiendaia",
+      "credentials": [
+        {
+          "accessKey": "tiendaia_access",
+          "secretKey": "cambia_este_secreto_s3"
+        }
+      ],
+      "actions": ["Read", "Write", "List", "Tagging"]
+    }
+  ]
+}

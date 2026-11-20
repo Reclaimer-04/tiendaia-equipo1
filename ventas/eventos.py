@@ -1,24 +1,68 @@
+
 """Publicación de eventos de dominio en RabbitMQ (Laboratorio 3)."""
+
 import json
 import logging
 import os
 import pika
 
 RABBIT = os.getenv("RABBITMQ_HOST", "rabbitmq")
-PARAMS = (pika.URLParameters(RABBIT) if "://" in RABBIT else pika.ConnectionParameters(RABBIT))
 EXCHANGE = "tienda.eventos"
 
+
 def publicar(clave: str, datos: dict) -> bool:
-    """Publica un evento; si el broker no responde, la venta NO se pierde."""
+    """Publica un evento de dominio en RabbitMQ."""
+
+    con = None
+
     try:
-        con = pika.BlockingConnection(PARAMS)
+        if "://" in RABBIT:
+            params = pika.URLParameters(RABBIT)
+        else:
+            params = pika.ConnectionParameters(
+                host=RABBIT,
+                connection_attempts=3,
+                retry_delay=2,
+                socket_timeout=5,
+                heartbeat=30
+            )
+
+        con = pika.BlockingConnection(params)
         canal = con.channel()
-        canal.exchange_declare(EXCHANGE, exchange_type="topic", durable=True)
-        canal.basic_publish(exchange=EXCHANGE, routing_key=clave,
-                            body=json.dumps(datos),
-                            properties=pika.BasicProperties(delivery_mode=2, content_type="application/json"))
-        con.close()
+
+        canal.exchange_declare(
+            exchange=EXCHANGE,
+            exchange_type="topic",
+            durable=True
+        )
+
+        # Confirma que RabbitMQ acepta los mensajes.
+        canal.confirm_delivery()
+
+        canal.basic_publish(
+            exchange=EXCHANGE,
+            routing_key=clave,
+            body=json.dumps(datos, ensure_ascii=False),
+            properties=pika.BasicProperties(
+                delivery_mode=2,
+                content_type="application/json"
+            ),
+            mandatory=True
+        )
+
         return True
+
     except Exception as e:
-        logging.warning("No se publicó %s: %s", clave, e)
+        logging.exception(
+            "No se pudo publicar el evento %s: %s",
+            clave,
+            e
+        )
         return False
+
+    finally:
+        if con is not None and con.is_open:
+            try:
+                con.close()
+            except Exception:
+                logging.warning("No se pudo cerrar la conexión RabbitMQ")

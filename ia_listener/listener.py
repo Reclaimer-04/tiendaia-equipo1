@@ -29,8 +29,18 @@ def procesar(canal, metodo, props, cuerpo):
         # Solicitar reentrenamiento cada 50 ventas
         if n % 50 == 0:
             print(f"Límite de {n} alcanzado. Iniciando reentrenamiento...", flush=True)
-            res = requests.post(f"{IA_URL}/ia/train", timeout=120)
-            print(f"Reentrenamiento finalizado. Código HTTP: {res.status_code}", flush=True)
+            res = requests.post(
+                f"{IA_URL}/ia/train",
+                timeout=120
+)
+
+            res.raise_for_status()
+
+            print(
+                 f"Reentrenamiento exitoso: {res.json()}",
+                flush=True
+)
+            
 
         # Confirmar el mensaje al final
         canal.basic_ack(delivery_tag=metodo.delivery_tag)
