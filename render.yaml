@@ -1,0 +1,32 @@
+services:
+  # IA-Service (Web Service - Python nativo)
+  - type: web
+    name: tiendaia-ia-equipo1
+    runtime: python
+    plan: free
+    rootDir: ia_service
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: VENTAS_URL
+        sync: false
+      - key: MODELO_PATH
+        value: /tmp/modelo.joblib
+      - key: PYTHON_VERSION
+        value: 3.12.7
+
+  # Cliente web (Static Site)
+  - type: web
+    name: tiendaia-web-equipo1
+    runtime: static
+    rootDir: frontend
+    buildCommand: echo "sin construccion"
+    staticPublishPath: .
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
