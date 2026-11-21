@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ia
+  labels:
+    app: ia
+
+spec:
+  replicas: 2
+
+  selector:
+    matchLabels:
+      app: ia
+
+  template:
+    metadata:
+      labels:
+        app: ia
+
+    spec:
+      containers:
+        - name: ia
+          image: tiendaia-ia:1
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - containerPort: 8000
+
+          env:
+            - name: MODELO_PATH
+              value: /app/modelo.joblib
+
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 3
