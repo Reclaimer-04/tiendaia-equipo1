@@ -1,4 +1,4 @@
-# TiendaIA - Laboratorios 2, 3, 4 y 5 (Parte E: Perímetro y segmentación de redes)
+# TiendaIA - Laboratorios 2, 3, 4, 5 y 6
 # Iniciar con: docker compose up -d --build
 # Antes: cp .env.ejemplo .env y configurar los valores.
 
@@ -121,6 +121,8 @@ services:
     build: {<<: *construir, args: {SERVICIO: gateway}}
     environment:
       CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      JWT_SECRET: ${JWT_SECRET:-}
+      API_KEY: ${API_KEY_GATEWAY:-}
     networks: [publica, interna]
     depends_on:
       clientes:
@@ -253,12 +255,25 @@ services:
     depends_on:
       - gateway
 
+  auth:
+    <<: *servicio
+    build: {<<: *construir, args: {SERVICIO: auth}}
+    environment:
+      JWT_SECRET: ${JWT_SECRET:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      AUTH_DB: /data/auth.db
+    volumes: [auth_data:/data]
+    # TEMPORAL para usar Swagger en el Paso 5 (se cierra en la Parte F)
+    networks: [interna, publica]
+    ports: ["127.0.0.1:8001:8000"]
+
 volumes:
   mysql_data:
   mongo_data:
   redis_data:
   modelos:
   seaweed_data:
+  auth_data:
 
 networks:
   publica: {}

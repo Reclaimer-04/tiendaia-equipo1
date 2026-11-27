@@ -1,0 +1,5 @@
+# Auth-Service (Laboratorio 6). Docker lo instala al construir la imagen.
+# hashlib, hmac, secrets y sqlite3 vienen con Python: no se instalan.
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pyjwt>=2.8
