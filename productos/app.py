@@ -3,20 +3,21 @@ Expone un CRUD de productos (nombre, precio, categoría) con FastAPI y guarda lo
 datos en MongoDB, una base de datos de documentos (cada producto es un JSON).
 """
 import os
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from pymongo import MongoClient, ReturnDocument
+from seguridad import requiere_servicio  # Lab. 6: valida x-api-key con Auth
 
 # ==============================================================================
 # Base de datos
 # ==============================================================================
-# MONGO_URL llega por variable de entorno (p. ej. mongodb://mongo:27017, donde
-# "mongo" es el nombre del contenedor en docker-compose.yml).
 db = MongoClient(os.environ["MONGO_URL"])["tienda"]
-# ["tienda"] selecciona la base de datos; MongoDB la crea al primer uso.
 db.productos.create_index("id", unique=True)
 
-app = FastAPI(title="TiendaIA - Productos")
+app = FastAPI(
+    title="TiendaIA - Productos",
+    dependencies=[Depends(requiere_servicio)],  # Lab. 6
+)
 
 # ==============================================================================
 # Modelos de entrada
@@ -25,7 +26,7 @@ class ProductoIn(BaseModel):
     """Datos de un producto enviados en el cuerpo JSON."""
     nombre: str = Field(min_length=1, max_length=100)
     precio: float = Field(gt=0)
-    categoria: str = "general" # valor por omisión si no se envía
+    categoria: str = "general"
 
 class ImagenIn(BaseModel):
     """Modelo para recibir la clave de la imagen (Lab 4)."""
@@ -56,7 +57,6 @@ def listar(categoria: str | None = None, precio_max: float | None = None):
     if precio_max is not None:
         filtro["precio"] = {"$lte": precio_max}
         
-    # {"_id": 0} es una proyección: excluye el campo id interno de MongoDB
     return list(db.productos.find(filtro, {"_id": 0}))
 
 @app.get("/productos/{producto_id}")
@@ -71,7 +71,7 @@ def obtener(producto_id: int):
 def crear(p: ProductoIn):
     """Crea un producto con id nuevo. Responde 201 (Created) o 422 si es inválido."""
     doc = {"id": siguiente_id(), **p.model_dump()}
-    db.productos.insert_one(dict(doc)) # copia: insert_one agrega _id
+    db.productos.insert_one(dict(doc))
     return doc
 
 @app.put("/productos/{producto_id}")

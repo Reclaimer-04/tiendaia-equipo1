@@ -232,3 +232,4 @@ __marimo__/
 seaweed/s3.json
 bench.env
 *.joblib
+.env.claves

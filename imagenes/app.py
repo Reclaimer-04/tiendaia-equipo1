@@ -2,9 +2,10 @@ import hashlib
 import os
 import uuid
 import requests
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from almacen import AlmacenS3
 from almacen_azure import AlmacenAzure
+from seguridad import requiere_servicio  # Lab. 6: valida x-api-key con Auth
 
 # ==============================================================================
 # Configuración global
@@ -30,7 +31,13 @@ else:
     raise ValueError(f"Proveedor de almacenamiento no soportado: {TIPO_ALMACEN}")
 
 sesion = requests.Session()
-app = FastAPI(title="TiendaIA - Imágenes")
+# Lab. 6: la cabecera se agrega a TODAS las peticiones que haga esta sesión
+sesion.headers.update({"x-api-key": os.getenv("API_KEY", "")})
+
+app = FastAPI(
+    title="TiendaIA - Imágenes",
+    dependencies=[Depends(requiere_servicio)],  # Lab. 6
+)
 
 # ==============================================================================
 # Funciones auxiliares
@@ -67,7 +74,6 @@ async def subir(producto_id: int = Form(gt=0), archivo: UploadFile = File(...)):
 
     almacen.subir(clave, datos, archivo.content_type, {"sha256": sha})
     
-    # Si el producto ya tenía una imagen, la borramos para no dejar archivos huérfanos
     if p.get("imagen_key"):
         almacen.eliminar(p["imagen_key"])
         

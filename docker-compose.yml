@@ -1,5 +1,5 @@
 # TiendaIA - Laboratorios 2, 3, 4, 5 y 6
-# Iniciar con: docker compose up -d --build
+# Iniciar con: docker compose --env-file .env --env-file .env.claves up -d --build
 # Antes: cp .env.ejemplo .env y configurar los valores.
 
 x-servicio: &servicio
@@ -86,6 +86,7 @@ services:
     environment:
       REDIS_HOST: redis
       RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
+      API_KEY: ${API_KEY_VENTAS:-}
     networks: [interna]
     depends_on:
       redis:
@@ -105,6 +106,7 @@ services:
       MODELO_PATH: /modelos/modelo.joblib
       REDIS_HOST: redis
       RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
+      API_KEY: ${API_KEY_IA:-}
     volumes:
       - modelos:/modelos
     networks: [interna]
@@ -236,6 +238,7 @@ services:
       BlobEndpoint: http://azurite:10000/devstoreaccount1
       S3_PUBLIC_ENDPOINT_AZURE: http://localhost:10000/devstoreaccount1
       ALMACEN: ${ALMACEN:-azure}
+      API_KEY: ${API_KEY_IMAGENES:-}
     networks: [interna]
     depends_on:
       - seaweedfs

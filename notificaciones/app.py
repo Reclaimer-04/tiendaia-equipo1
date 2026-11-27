@@ -9,7 +9,8 @@ import time
 from contextlib import asynccontextmanager
 import pika
 import redis
-from fastapi import FastAPI, Query
+from fastapi import Depends, FastAPI, Query
+from seguridad import requiere_servicio  # Lab. 6: valida x-api-key con Auth
 
 RABBIT = os.getenv("RABBITMQ_HOST", "rabbitmq")
 PARAMS = (pika.URLParameters(RABBIT) if "://" in RABBIT else pika.ConnectionParameters(RABBIT))
@@ -19,7 +20,6 @@ def al_recibir(canal, metodo, props, cuerpo):
     """Callback de pika: se ejecuta una vez por cada evento recibido."""
     try:
         venta = json.loads(cuerpo)
-        # Validación básica para lanzar KeyError si falta el ID
         _ = venta["id"] 
         
         texto = f"Venta {venta['id']}: cliente {venta['cliente_id']} compró {venta['cantidad']} x producto {venta['producto_id']} (${venta['total']})"
@@ -53,7 +53,11 @@ async def ciclo_de_vida(app):
     hilo.start()
     yield
 
-app = FastAPI(title="TiendaIA Notificaciones", lifespan=ciclo_de_vida)
+app = FastAPI(
+    title="TiendaIA Notificaciones",
+    lifespan=ciclo_de_vida,
+    dependencies=[Depends(requiere_servicio)],  # Lab. 6
+)
 
 @app.get("/health")
 def health():
